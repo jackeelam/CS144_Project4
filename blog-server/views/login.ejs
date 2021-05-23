@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+</head>
+<body>
+    <h1>Login</h1>
+    <form action="/login" method="POST" enctype="application/x-www-form-urlencoded">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username">
+        <label for="password">Password</label>
+        <input type="text" id="password" name="password">
+        <% if(has_redirect){ %>
+            <h1>Redirect passed</h1>
+            <label for="redirect"></label>
+            <input type="hidden" id="redirect" name="redirect" value=<%= redirect %>>
+        <% } %>
+        
+        <input type="submit" value="SUBMIT">
+    </form>
+    
+</body>
+</html>

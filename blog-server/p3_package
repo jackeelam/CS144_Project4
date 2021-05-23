@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+ZIP_FILE=project3.zip
+TMP_DIR=/tmp/p3-zip
+CUR_DIR=$(pwd)
+SRC_DIR=$CUR_DIR
+
+#error function
+function error_exit()
+{
+   echo -e "ERROR: $1" 1>&2
+   rm -rf ${TMP_DIR}
+   exit 1
+}
+
+# make sure running in container
+if [ `whoami` != "cs144" ]; then
+    error_exit "You need to run this script within the container"
+fi
+
+# if the source directory is passed as parameter, use it
+if [ $# -eq 1 ]; then
+    SRC_DIR=$1
+fi
+
+# if zip file exists, remove it first
+if [ -f "$CUR_DIR/$ZIP_FILE" ]; then
+    rm -f $CUR_DIR/$ZIP_FILE
+fi
+
+# change to source dir
+cd $CUR_DIR # in case SRC_DIR is given relative to CUR_DIR
+cd $SRC_DIR
+
+# check required files
+if [ ! -f "db.sh" ]; then
+    error_exit "Missing $SRC_DIR/db.sh"
+fi
+if [ ! -f "package.json" ]; then
+    error_exit "Missing $SRC_DIR/package.json"
+fi
+
+# create the zip file
+zip -rq $CUR_DIR/$ZIP_FILE . -x p3_package .DS_Store Thumbs.db 'node_modules/*' '.git/*' '*/.DS_Store' '*/Thumbs.db' @
+if [ $? -ne 0 ]; then
+    error_exit "Create $ZIP_FILE failed, check for error messages in console."
+fi
+
+#
+# Now perform basic sanity check of the created zip file
+#
+echo "Testing your $ZIP_FILE for basic sanity check..."
+
+# unzip to $TMP_DIR
+rm -rf ${TMP_DIR}
+mkdir -p ${TMP_DIR}
+unzip -q -d ${TMP_DIR} $CUR_DIR/$ZIP_FILE 
+cd ${TMP_DIR}
+
+# run npm install
+echo "Installing node modules..."
+npm install
+
+# drop all collections in BlogServer database
+echo "Deleting all documents in BlogServer database..."
+cat << EOF | mongo &> /dev/null
+    use BlogServer;
+    db.dropDatabase();
+EOF
+
+# load initial documents to mongodb
+echo "Loading initial documents to MongoDB using your db.sh..."
+mongo < ./db.sh &> /dev/null
+
+# run the server
+echo "Running your blog server..."
+npm start &> /dev/null &
+if [ $? -ne 0 ]; then
+    error_exit "Failed to run your blog server. Is your code in a runable state? Are you running another server at port 3000?"
+fi
+PID=$!
+sleep 3
+
+# check 200 response
+URL="http://localhost:3000/blog/cs144/1"
+echo "Requesting ${URL}"
+response_code=`curl -s -o /dev/null -w "%{http_code}" ${URL}`
+if [ $response_code = "200" ]; then
+    echo "Correct status code was obtained from your server"
+else
+    error_exit "HTTP status code at ${URL} is incorrect"
+fi
+
+# kill the node server
+echo "Stopping the node server..."
+kill `pgrep node`
+
+# remove temp files
+cd $SRC_DIR
+rm -rf $TMP_DIR
+
+echo "[SUCCESS] Created '$SRC_DIR/$ZIP_FILE'. Ready for submission."
+
+exit 0

@@ -1,0 +1,95 @@
+#!/bin/bash
+
+ZIP_FILE="project4.zip"
+TMP_DIR="/tmp/p4-zip"
+CUR_DIR=$(pwd)
+SRC_DIR=${CUR_DIR}
+
+function error_exit()
+{
+   echo -e "ERROR: $1" 1>&2
+   rm -rf ${TMP_DIR}
+   exit 1
+}
+
+# make sure running in container
+if [ `whoami` != "cs144" ]; then
+    error_exit "You need to run this script within the container"
+fi
+
+# if the source directory is passed as parameter, use it
+if [ $# -eq 1 ]; then
+    SRC_DIR=$1
+fi
+
+# check a few files as the minimum sanity check
+if [ ! -f "${SRC_DIR}/blog-server/package.json" ]; then
+    error_exit "Missing files in ${SRC_DIR}/blog-server"
+fi
+if [ ! -f "${SRC_DIR}/blog-server/db.sh" ]; then
+    error_exit "Missing files in ${SRC_DIR}/blog-server"
+fi
+if [ ! -f "${SRC_DIR}/angular-blog/package.json" ]; then
+    error_exit "Missing files in ${SRC_DIR}/angular-blog"
+fi
+if [ ! -f "${SRC_DIR}/angular-blog/angular.json" ]; then
+    error_exit "Missing files in ${SRC_DIR}/angular-blog"
+fi
+
+# change to the angular-blog directory
+cd ${SRC_DIR}/angular-blog
+
+# check if there is 192.168.X.X string in the source code
+grep '192.168.' src/app/*.ts > /dev/null
+if [ $? -eq 0 ]; then
+    echo '[WARNING] The script detected that your code has string 192.168.X.X'
+    echo '[WARNING] You may want to double check if you included hostname in your URLs'
+fi 
+
+# check if there is localhost string in the source code
+grep 'localhost' src/app/*.ts > /dev/null
+if [ $? -eq 0 ]; then
+    echo '[WARNING] The script detected that your code has string localhost'
+    echo '[WARNING] You may want to double check if you included hostname in your URLs'
+fi 
+
+echo "Building your Angular project ..."
+echo n | npm install
+ng build --base-href=/editor/ --deploy-url=/editor/ --prod=true
+if [ $? -ne 0 ]; then
+    error_exit "ng build failed."
+else
+    echo "Successfully completed ng build."
+fi
+
+
+#
+# create the zip file
+#
+echo "Creating ${ZIP_FILE} file ..."
+
+# remove existing zip file if any
+if [ -f "${CUR_DIR}/${ZIP_FILE}" ]; then
+    rm -f ${CUR_DIR}/${ZIP_FILE}
+fi
+
+# recreate $TMP_DIR
+rm -rf ${TMP_DIR}
+mkdir -p ${TMP_DIR}
+
+# create the zip file
+cd ${CUR_DIR} # in case SRC_DIR is given relative to CUR_DIR
+cd ${SRC_DIR}
+zip -rq ${TMP_DIR}/${ZIP_FILE} angular-blog/ blog-server/ -x 'angular-blog/node_modules/*' 'angular-blog/.git/*' 'blog-server/node_modules/*' 'blog-server/.git/*' '*/.DS_Store' '*/Thumbs.db' @ 
+if [ $? -ne 0 ]; then
+    error_exit "Create ${ZIP_FILE} failed, check for error messages in console."
+fi
+mv ${TMP_DIR}/${ZIP_FILE} ${CUR_DIR}
+if [ $? -ne 0 ]; then
+    error_exit "Create ${ZIP_FILE} failed, check for error messages in console."
+else
+    echo "[SUCCESS] Created '${CUR_DIR}/${ZIP_FILE}'."
+fi
+
+cd ${CUR_DIR}
+exit 0
