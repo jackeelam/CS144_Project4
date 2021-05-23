@@ -1,0 +1,21 @@
+<form>
+
+    <label for="title">Title:</label>
+    <br>
+    <input type="text" id="edit-title" name="title" [(ngModel)]="post.title" value="{{ post.title }}"><br><br>
+    <br>
+    <label for="body">Body:</label>
+    <br>
+    <textarea type="text" id="edit-body" name="body" [(ngModel)]="post.body" rows="4" cols="50"> {{ post.body }} </textarea><br><br>
+    <p *ngIf="post.postid!==0">
+        Last Modified: {{ post.modified | date: 'medium' }}
+    </p>
+</form>
+
+<!-- Save -->
+<button class="button button1" id="edit-save-button" type="button" (click)="savePost.emit(post)">Save</button>
+<!-- Delete -->
+<button class="button button1" id="edit-delete-button" type="button" (click)="deletePost.emit(post)">Delete</button>
+<!-- Preview -->
+<button class="button button1" id="edit-preview-button" type="button" (click)="previewPost.emit(post)">Preview</button>
+

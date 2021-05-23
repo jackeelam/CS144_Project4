@@ -1,0 +1,9 @@
+.container {
+    display: grid;
+    grid-template-columns: 50% 50%;
+    
+  }
+
+  .item{
+      padding: 10px;
+  }

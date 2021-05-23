@@ -1,0 +1,14 @@
+<button class="button button1" id="list-new-button" type="button" (click)="newPost.emit()">New Post</button>
+<table>
+    <tr>
+        <th>Title</th>
+        <th>Date Created</th>
+    </tr>
+
+    <tr *ngFor="let post of posts" (click)="openPost.emit(post)" [attr.id]="'list-post-'+ post.postid">
+        <td> {{post.title}} </td>
+        <td> {{ post.created | date: 'medium' }} </td>
+    </tr>
+
+</table>
+
